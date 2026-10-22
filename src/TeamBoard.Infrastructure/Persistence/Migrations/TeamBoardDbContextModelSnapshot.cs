@@ -3,20 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using TeamBoard.Api.Data;
+using TeamBoard.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace TeamBoard.Api.Migrations
+namespace TeamBoard.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(TeamBoardDbContext))]
-    [Migration("20261020023752_InitialCreate")]
-    partial class InitialCreate
+    partial class TeamBoardDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -25,7 +22,7 @@ namespace TeamBoard.Api.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("TeamBoard.Api.Models.Board", b =>
+            modelBuilder.Entity("TeamBoard.Domain.Boards.Board", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -50,7 +47,7 @@ namespace TeamBoard.Api.Migrations
                     b.ToTable("Boards");
                 });
 
-            modelBuilder.Entity("TeamBoard.Api.Models.TaskItem", b =>
+            modelBuilder.Entity("TeamBoard.Domain.Tasks.TaskItem", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -92,9 +89,9 @@ namespace TeamBoard.Api.Migrations
                     b.ToTable("Tasks", (string)null);
                 });
 
-            modelBuilder.Entity("TeamBoard.Api.Models.TaskItem", b =>
+            modelBuilder.Entity("TeamBoard.Domain.Tasks.TaskItem", b =>
                 {
-                    b.HasOne("TeamBoard.Api.Models.Board", "Board")
+                    b.HasOne("TeamBoard.Domain.Boards.Board", "Board")
                         .WithMany("Tasks")
                         .HasForeignKey("BoardId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -103,7 +100,7 @@ namespace TeamBoard.Api.Migrations
                     b.Navigation("Board");
                 });
 
-            modelBuilder.Entity("TeamBoard.Api.Models.Board", b =>
+            modelBuilder.Entity("TeamBoard.Domain.Boards.Board", b =>
                 {
                     b.Navigation("Tasks");
                 });

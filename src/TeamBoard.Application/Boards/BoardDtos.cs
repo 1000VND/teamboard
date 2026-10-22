@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using TeamBoard.Application.Tasks;
 
-namespace TeamBoard.Api.Dtos;
+namespace TeamBoard.Application.Boards;
 
 public record BoardDto(int Id, string Name, string? Description, DateTime CreatedAt, int TaskCount);
 

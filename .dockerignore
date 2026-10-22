@@ -1,0 +1,9 @@
+# Build context is the repo root — keep secrets and build output out of it
+.env
+.git/
+.vs/
+**/bin/
+**/obj/
+**/*.user
+docs/
+tests/

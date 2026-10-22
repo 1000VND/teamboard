@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\TeamBoard.Domain\TeamBoard.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- DbSet + async LINQ for IAppDbContext; no provider (SQL Server stays in Infrastructure) -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+  </ItemGroup>
+
+</Project>

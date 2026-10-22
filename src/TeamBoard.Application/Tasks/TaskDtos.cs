@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using TeamBoard.Api.Models;
+using TeamBoard.Domain.Tasks;
 
-namespace TeamBoard.Api.Dtos;
+namespace TeamBoard.Application.Tasks;
 
 public record TaskDto(
     int Id, string Title, string? Description, TaskItemStatus Status,

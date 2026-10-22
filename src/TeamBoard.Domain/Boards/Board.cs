@@ -1,4 +1,6 @@
-namespace TeamBoard.Api.Models;
+using TeamBoard.Domain.Tasks;
+
+namespace TeamBoard.Domain.Boards;
 
 public class Board
 {

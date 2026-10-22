@@ -1,4 +1,6 @@
-﻿namespace TeamBoard.Api.Models;
+﻿using TeamBoard.Domain.Boards;
+
+namespace TeamBoard.Domain.Tasks;
 
 // Entity "Task" — named TaskItem to avoid clashing with System.Threading.Tasks.Task; table is "Tasks".
 public class TaskItem
@@ -13,11 +15,4 @@ public class TaskItem
 
     public int BoardId { get; set; }
     public Board? Board { get; set; }
-}
-
-public enum TaskItemStatus
-{
-    Todo,
-    InProgress,
-    Done
 }

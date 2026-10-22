@@ -51,6 +51,53 @@ dotnet run --project src/TeamBoard.Api --launch-profile http
 
 Mở Swagger: http://localhost:5012/swagger · Health: http://localhost:5012/health
 
+### Chạy test
+
+```bash
+dotnet test
+```
+
+Test tích hợp chạy API thật trong bộ nhớ (`WebApplicationFactory`) với EF Core InMemory thay cho SQL Server, nên không cần Docker.
+Riêng hành vi xoá cascade do SQL Server thực hiện, InMemory không mô phỏng được, nên kiểm tra bằng compose.
+
+## Cấu trúc dự án
+
+Chia theo Clean Architecture: phụ thuộc chỉ đi vào trong, `Domain` không biết gì về EF Core hay HTTP. Lý do xem [ADR 0002](docs/adr/0002-clean-architecture.md).
+
+```
+TeamBoard.slnx
+Directory.Build.props        # net10.0, nullable, implicit usings cho mọi project
+Directory.Packages.props     # version NuGet dùng chung (central package management)
+docker-compose.yml · .env.example · .dockerignore
+src/
+├── TeamBoard.Domain/            # Entity + enum, không tham chiếu project/package nào
+│   ├── Boards/                  #   Board
+│   └── Tasks/                   #   TaskItem, TaskItemStatus
+├── TeamBoard.Application/       # Nghiệp vụ: service, DTO, interface — → Domain
+│   ├── Common/                  #   IAppDbContext, Result/Error
+│   ├── Boards/                  #   BoardService, BoardDtos
+│   ├── Tasks/                   #   TaskService, TaskDtos, TaskMappings
+│   └── DependencyInjection.cs   #   AddApplication()
+├── TeamBoard.Infrastructure/    # EF Core + SQL Server — → Application
+│   ├── Persistence/             #   TeamBoardDbContext, Configurations/, Migrations/
+│   └── DependencyInjection.cs   #   AddInfrastructure(): DbContext, health check, migrate
+└── TeamBoard.Api/               # HTTP: controller, Program.cs, Dockerfile — → Application, Infrastructure
+    ├── Controllers/             #   ApiControllerBase (Result/Error → envelope + status), Boards, Tasks
+    ├── Responses/               #   ApiResponse { success, data, message }, ApiResponseClientErrorFactory
+    ├── Setup/                   #   AddApiControllers(), UseApiErrorResponses(), thông báo lỗi tiếng Việt
+    └── Json/                    #   UtcDateTimeJsonConverter (thời gian luôn UTC, có "Z")
+tests/
+└── TeamBoard.Api.Tests/         # Test tích hợp qua HTTP
+```
+
+Thêm tính năng mới: entity vào `Domain/<Feature>/`, service + DTO vào `Application/<Feature>/`, cấu hình EF vào `Infrastructure/Persistence/Configurations/`, controller vào `Api/Controllers/`.
+
+Tạo migration (chạy từ thư mục gốc):
+
+```bash
+dotnet ef migrations add <TênMigration> --project src/TeamBoard.Infrastructure --startup-project src/TeamBoard.Api --output-dir Persistence/Migrations
+```
+
 ### API
 
 | Endpoint | Ghi chú |
@@ -67,6 +114,35 @@ Mở Swagger: http://localhost:5012/swagger · Health: http://localhost:5012/hea
 | `POST /api/tasks` | Tạo task (body có `boardId`) |
 | `PUT /api/tasks/{id}` | Sửa task |
 | `DELETE /api/tasks/{id}` | Xoá task |
+
+### Định dạng response
+
+Mọi response (trừ `/health`) có cùng một khung `{ success, data, message }`, **và HTTP status vẫn đúng** (200/201/400/404/500…). Không bao giờ trả 200 cho lỗi — load balancer, CloudWatch alarm và health check của AWS dựa vào status code.
+
+```json
+// 200 — GET /api/tasks/5
+{ "success": true, "data": { "id": 5, "title": "Viết API", "status": "InProgress", "createdAt": "2026-10-22T01:25:14.85Z", ... }, "message": null }
+
+// 201 — POST /api/boards/1/tasks (kèm header Location: /api/tasks/6)
+{ "success": true, "data": { "id": 6, ... }, "message": "Đã tạo task." }
+
+// 200 — PUT / DELETE
+{ "success": true, "data": null, "message": "Đã xoá task." }
+
+// 404 — id không tồn tại
+{ "success": false, "data": null, "message": "Board 99999 không tồn tại.", "traceId": "00-…" }
+
+// 400 — dữ liệu không hợp lệ: key trong "errors" trùng tên field JSON
+{ "success": false, "data": null, "message": "Dữ liệu không hợp lệ.",
+  "errors": { "title": ["Không được để trống."], "assignee": ["Tối đa 100 ký tự."] }, "traceId": "00-…" }
+```
+
+- `errors` chỉ có ở lỗi validation; `traceId` chỉ có khi lỗi, dùng để tìm request trong log.
+- Lỗi do framework sinh ra cũng theo khung này: route không tồn tại (404), sai method (405), sai Content-Type (415), exception không bắt (500 — chỉ trả thông báo chung, chi tiết nằm trong log).
+- JSON: field camelCase, enum dạng chữ, thời gian luôn là UTC có hậu tố `Z`. Gửi lên có offset (`+07:00`) sẽ được đổi sang UTC; không có offset thì coi là UTC.
+- `/health` giữ dạng text `Healthy` / `Unhealthy` cho health check của Docker/AWS.
+
+Code: `Api/Responses/ApiResponse.cs` (khung), `ApiControllerBase` (`OkOrFail`, `CreatedOrFail`, `Fail`), `Setup/ControllerSetup.cs` (400), `Setup/ErrorResponseSetup.cs` (404/405/500 ngoài controller).
 
 ### Xoá board có task: xoá theo (cascade)
 
